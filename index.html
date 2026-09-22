@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>오목</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: radial-gradient(ellipse at center, #3a2418 0%, #1a0e08 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #f4e4c1;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 16px;
+    letter-spacing: 8px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+    color: #f4e4c1;
+  }
+  .menu {
+    background: rgba(0,0,0,0.4);
+    padding: 20px 28px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    border: 1px solid rgba(244,228,193,0.2);
+  }
+  .menu label { font-size: 14px; opacity: 0.9; }
+  .menu select, .menu button {
+    background: #f4e4c1;
+    color: #2a1810;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .menu button:hover { background: #fff3d9; }
+  .menu select { padding: 8px 10px; }
+  .status {
+    font-size: 16px;
+    margin-bottom: 14px;
+    min-height: 24px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+  }
+  .board-wrap {
+    position: relative;
+    padding: 30px;
+    border-radius: 6px;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,220,150,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(80,40,10,0.3) 0%, transparent 50%),
+      linear-gradient(135deg, #d4a460 0%, #c08840 50%, #a86820 100%);
+    box-shadow:
+      0 20px 40px rgba(0,0,0,0.6),
+      0 0 0 2px #5a3010,
+      inset 0 0 60px rgba(80,40,10,0.3);
+  }
+  .board-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 4px;
+    background-image:
+      repeating-linear-gradient(90deg, transparent 0 3px, rgba(80,40,10,0.04) 3px 4px),
+      repeating-linear-gradient(180deg, transparent 0 7px, rgba(120,60,20,0.05) 7px 8px);
+    pointer-events: none;
+  }
+  canvas {
+    display: block;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+  }
+  .info {
+    margin-top: 14px;
+    font-size: 13px;
+    opacity: 0.7;
+  }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal {
+    background: linear-gradient(160deg, #f4e4c1 0%, #e0c896 50%, #c8a868 100%);
+    padding: 50px 70px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.7),
+      0 0 0 2px rgba(255,220,150,0.4),
+      inset 0 2px 20px rgba(255,255,255,0.4);
+    transform: scale(0.5) rotate(-8deg);
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .modal-overlay.show .modal {
+    transform: scale(1) rotate(0deg);
+  }
+  .modal::before {
+    content: "";
+    position: absolute;
+    inset: -50%;
+    background: conic-gradient(from 0deg, transparent, rgba(255,220,150,0.3), transparent, rgba(255,220,150,0.3), transparent);
+    animation: rotate 4s linear infinite;
+    pointer-events: none;
+  }
+  .modal-content {
+    position: relative;
+    z-index: 1;
+  }
+  @keyframes rotate {
+    to { transform: rotate(360deg); }
+  }
+  .modal .crown {
+    font-size: 56px;
+    margin-bottom: 10px;
+    animation: bounce 1s ease infinite alternate;
+  }
+  @keyframes bounce {
+    to { transform: translateY(-8px); }
+  }
+  .modal h2 {
+    font-size: 48px;
+    color: #2a1810;
+    letter-spacing: 12px;
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.5), 4px 4px 8px rgba(0,0,0,0.2);
+    font-weight: 900;
+  }
+  .modal .sub {
+    font-size: 16px;
+    color: #5a3010;
+    margin-bottom: 28px;
+    letter-spacing: 4px;
+    opacity: 0.85;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+  }
+  .modal button {
+    background: #2a1810;
+    color: #f4e4c1;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .modal button:hover {
+    background: #4a2820;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  }
+  .modal button.secondary {
+    background: transparent;
+    color: #2a1810;
+    border: 2px solid #2a1810;
+  }
+  .modal button.secondary:hover {
+    background: rgba(42,24,16,0.1);
+  }
+</style>
+</head>
+<body>
+  <h1>은평메디텍고 오목 동아리</h1>
+  <div class="menu">
+    <label>모드:
+      <select id="mode">
+        <option value="1">1인용 (AI 대전)</option>
+        <option value="2">2인용</option>
+      </select>
+    </label>
+    <label>난이도:
+      <select id="level">
+        <option value="1">초급</option>
+        <option value="2" selected>중급</option>
+        <option value="3">고급</option>
+        <option value="4">신급</option>
+      </select>
+    </label>
+    <label>선:
+      <select id="first">
+        <option value="black">흑 (선공)</option>
+        <option value="white">백 (후공)</option>
+      </select>
+    </label>
+    <button id="newBtn">새 게임</button>
+    <button id="undoBtn">무르기</button>
+  </div>
+  <div class="status" id="status">새 게임을 시작하세요</div>
+  <div class="board-wrap">
+    <canvas id="board" width="640" height="640"></canvas>
+  </div>
+  <div class="info">5목을 먼저 만들면 승리 · 클릭하여 돌을 놓으세요</div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-content">
+        <div class="crown" id="modalIcon">👑</div>
+        <h2 id="modalTitle">흑 승리</h2>
+        <div class="sub" id="modalSub">VICTORY</div>
+        <div class="modal-buttons">
+          <button id="modalNew">새 게임</button>
+          <button class="secondary" id="modalClose">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const SIZE = 15;
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const PAD = 30;
+  const CELL = (canvas.width - PAD * 2) / (SIZE - 1);
+
+  let board, current, history, gameOver, mode, level, humanColor, aiThinking;
+
+  function init() {
+    hideModal();
+    board = Array.from({length: SIZE}, () => Array(SIZE).fill(0)); // 0 empty, 1 black, 2 white
+    current = 1; // black always starts
+    history = [];
+    gameOver = false;
+    mode = document.getElementById('mode').value;
+    level = parseInt(document.getElementById('level').value);
+    humanColor = document.getElementById('first').value === 'black' ? 1 : 2;
+    aiThinking = false;
+    draw();
+    updateStatus();
+    if (mode === '1' && current !== humanColor) {
+      setTimeout(aiMove, 400);
+    }
+  }
+
+  function draw() {
+    // 격자선
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#2a1505';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < SIZE; i++) {
+      const p = PAD + i * CELL;
+      ctx.beginPath();
+      ctx.moveTo(PAD, p);
+      ctx.lineTo(PAD + (SIZE-1) * CELL, p);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p, PAD);
+      ctx.lineTo(p, PAD + (SIZE-1) * CELL);
+      ctx.stroke();
+    }
+    // 테두리는 좀 더 굵게
+    ctx.lineWidth = 2;
+    ctx.strokeRect(PAD, PAD, (SIZE-1)*CELL, (SIZE-1)*CELL);
+
+    // 화점 (천원 + 8개)
+    const stars = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
+    ctx.fillStyle = '#2a1505';
+    for (const [x,y] of stars) {
+      ctx.beginPath();
+      ctx.arc(PAD + x*CELL, PAD + y*CELL, 4, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // 돌
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        if (board[y][x]) drawStone(x, y, board[y][x]);
+      }
+    }
+
+    // 마지막 수 표시
+    if (history.length > 0) {
+      const last = history[history.length-1];
+      ctx.strokeStyle = last.color === 1 ? '#ff4444' : '#ff4444';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(PAD + last.x*CELL, PAD + last.y*CELL, CELL*0.18, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+
+  function drawStone(x, y, color) {
+    const cx = PAD + x*CELL;
+    const cy = PAD + y*CELL;
+    const r = CELL * 0.45;
+    // 그림자
+    ctx.beginPath();
+    ctx.arc(cx+2, cy+3, r, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fill();
+    // 돌
+    const grad = ctx.createRadialGradient(cx - r*0.4, cy - r*0.4, r*0.1, cx, cy, r);
+    if (color === 1) {
+      grad.addColorStop(0, '#555');
+      grad.addColorStop(0.4, '#222');
+      grad.addColorStop(1, '#000');
+    } else {
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.6, '#e8e4d8');
+      grad.addColorStop(1, '#b8b0a0');
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    // 윤곽
+    ctx.strokeStyle = color === 1 ? '#000' : '#888';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  canvas.addEventListener('click', e => {
+    if (gameOver || aiThinking) return;
+    if (mode === '1' && current !== humanColor) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const x = Math.round((mx - PAD) / CELL);
+    const y = Math.round((my - PAD) / CELL);
+    if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return;
+    if (board[y][x] !== 0) return;
+    place(x, y, current);
+    if (!gameOver && mode === '1' && current !== humanColor) {
+      aiThinking = true;
+      updateStatus();
+      setTimeout(() => { aiMove(); aiThinking = false; }, 200);
+    }
+  });
+
+  function place(x, y, color) {
+    board[y][x] = color;
+    history.push({x, y, color});
+    draw();
+    if (checkWin(x, y, color)) {
+      gameOver = true;
+      const winText = color === 1 ? '흑 승리' : '백 승리';
+      updateStatus(winText + '!');
+      showModal(color, winText);
+      return;
+    }
+    if (history.length === SIZE*SIZE) {
+      gameOver = true;
+      updateStatus('무승부');
+      showModal(0, '무승부');
+      return;
+    }
+    current = 3 - color;
+    updateStatus();
+  }
+
+  function checkWin(x, y, color) {
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for (const [dx,dy] of dirs) {
+      let cnt = 1;
+      for (let i = 1; i < 5; i++) {
+        const nx = x+dx*i, ny = y+dy*i;
+        if (nx<0||nx>=SIZE||ny<0||ny>=SIZE||board[ny][nx]!==color) break;
+        cnt++;
+      }
+      for (let i = 1; i < 5; i++) {
+        const nx = x-dx*i, ny = y-dy*i;
+        if (nx<0||nx>=SIZE||ny<0||ny>=SIZE||board[ny][nx]!==color) break;
+        cnt++;
+      }
+      if (cnt >= 5) return true;
+    }
+    return false;
+  }
+
+  function updateStatus(msg) {
+    const el = document.getElementById('status');
+    if (msg) { el.textContent = msg; return; }
+    if (aiThinking) { el.textContent = 'AI가 생각 중...'; return; }
+    el.textContent = (current === 1 ? '● 흑' : '○ 백') + ' 차례';
+  }
+
+  document.getElementById('newBtn').onclick = init;
+
+  // 모달 관련
+  function showModal(color, title) {
+    const modal = document.getElementById('modal');
+    const icon = document.getElementById('modalIcon');
+    const t = document.getElementById('modalTitle');
+    const sub = document.getElementById('modalSub');
+    if (color === 0) {
+      icon.textContent = '🤝';
+      sub.textContent = 'DRAW';
+    } else {
+      // 1인용일 때 사람이 이겼는지 표시
+      if (mode === '1') {
+        if (color === humanColor) {
+          icon.textContent = '👑';
+          sub.textContent = 'YOU WIN';
+        } else {
+          icon.textContent = '💀';
+          sub.textContent = 'YOU LOSE';
+        }
+      } else {
+        icon.textContent = color === 1 ? '⚫' : '⚪';
+        sub.textContent = 'VICTORY';
+      }
+    }
+    t.textContent = title;
+    setTimeout(() => modal.classList.add('show'), 300);
+  }
+  function hideModal() {
+    document.getElementById('modal').classList.remove('show');
+  }
+  document.getElementById('modalNew').onclick = () => { hideModal(); init(); };
+  document.getElementById('modalClose').onclick = hideModal;
+  document.getElementById('undoBtn').onclick = () => {
+    if (gameOver) return;
+    if (mode === '1') {
+      // 사람과 AI 한 수씩 되돌리기
+      if (history.length >= 2) {
+        for (let i = 0; i < 2; i++) {
+          const last = history.pop();
+          board[last.y][last.x] = 0;
+        }
+        current = humanColor;
+        draw();
+        updateStatus();
+      }
+    } else {
+      if (history.length >= 1) {
+        const last = history.pop();
+        board[last.y][last.x] = 0;
+        current = last.color;
+        draw();
+        updateStatus();
+      }
+    }
+  };
+  document.getElementById('mode').onchange = init;
+  document.getElementById('level').onchange = init;
+  document.getElementById('first').onchange = init;
+
+  // ===== AI 로직 =====
+  // 패턴 점수 평가 기반. 난이도별로 탐색 깊이/노이즈 다름.
+
+  // 한 위치에서 한 색의 점수 평가 (4방향 패턴 점수 합)
+  function scorePoint(bd, x, y, color) {
+    if (bd[y][x] !== 0) return 0;
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    let total = 0;
+    for (const [dx,dy] of dirs) {
+      total += linePatternScore(bd, x, y, dx, dy, color);
+    }
+    return total;
+  }
+
+  // 한 방향의 라인 패턴 점수
+  function linePatternScore(bd, x, y, dx, dy, color) {
+    const opp = 3 - color;
+    // 가상으로 놓은 상태로 라인 추출 (-4 ~ +4, 총 9칸, 중앙이 가상의 돌)
+    const line = [];
+    for (let i = -4; i <= 4; i++) {
+      const nx = x + dx*i, ny = y + dy*i;
+      if (nx<0||nx>=SIZE||ny<0||ny>=SIZE) line.push(-1); // 벽
+      else if (i === 0) line.push(color);
+      else line.push(bd[ny][nx]);
+    }
+    return evalLine(line, color, opp);
+  }
+
+  function evalLine(line, me, op) {
+    // 다양한 부분 패턴 검사
+    let score = 0;
+    const s = line.map(v => v===me?'M':v===op?'O':v===-1?'X':'.').join('');
+    // 5목
+    if (s.includes('MMMMM')) score += 1000000;
+    // 열린 4 (양쪽 빈칸)
+    if (/\.MMMM\./.test(s)) score += 100000;
+    // 닫힌 4
+    if (/OMMMM\.|\.MMMMO|XMMMM\.|\.MMMMX/.test(s)) score += 10000;
+    // 열린 4 변형 (사이 끼임)
+    if (/\.MMM\.M\.|\.M\.MMM\.|\.MM\.MM\.|\.MMMM/.test(s) && !/MMMMM/.test(s)) {
+      // 이미 위에서 처리된 경우 제외 위해 단순화
+    }
+    // 열린 3
+    if (/\.MMM\.\./.test(s) || /\.\.MMM\./.test(s) || /\.MM\.M\./.test(s) || /\.M\.MM\./.test(s)) score += 5000;
+    // 닫힌 3
+    if (/OMMM\.\.|\.\.MMMO|XMMM\.\.|\.\.MMMX|O\.MMM\.|\.MMM\.O/.test(s)) score += 500;
+    // 열린 2
+    if (/\.\.MM\.\./.test(s) || /\.M\.M\./.test(s)) score += 200;
+    // 닫힌 2
+    if (/OMM\.\.\.|\.\.\.MMO|XMM\.\.\.|\.\.\.MMX/.test(s)) score += 50;
+    // 단독
+    if (/\.\.\.M\.\.\./.test(s)) score += 10;
+    return score;
+  }
+
+  // 가능한 후보 수 (기존 돌 주변만)
+  function getCandidates(bd) {
+    const cands = [];
+    const seen = new Set();
+    for (let y = 0; y < SIZE; y++) {
+      for (let x = 0; x < SIZE; x++) {
+        if (bd[y][x] === 0) continue;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const nx = x+dx, ny = y+dy;
+            if (nx<0||nx>=SIZE||ny<0||ny>=SIZE) continue;
+            if (bd[ny][nx] !== 0) continue;
+            const key = ny*SIZE+nx;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            cands.push([nx, ny]);
+          }
+        }
+      }
+    }
+    if (cands.length === 0) cands.push([7,7]);
+    return cands;
+  }
+
+  // 한 수 평가: (내 점수 + 상대 차단 점수)
+  function evaluateMove(bd, x, y, me) {
+    const op = 3 - me;
+    const myScore = scorePoint(bd, x, y, me);
+    const opScore = scorePoint(bd, x, y, op);
+    // 공격 가중 + 수비 가중
+    return myScore * 1.05 + opScore;
+  }
+
+  // 미니맥스 (간단판) - 고급/신급용
+  function minimax(bd, depth, alpha, beta, maximizing, me) {
+    if (depth === 0) {
+      // 보드 전체 평가: 모든 빈칸에 대해 가장 좋은 한 수의 점수
+      let best = -Infinity;
+      const cands = getCandidates(bd).slice(0, 10);
+      for (const [x,y] of cands) {
+        const sc = scorePoint(bd, x, y, me) - scorePoint(bd, x, y, 3-me) * 0.9;
+        if (sc > best) best = sc;
+      }
+      return best;
+    }
+    const cands = getCandidates(bd);
+    // 후보 가지치기: 점수순으로 상위만
+    const scored = cands.map(([x,y]) => {
+      const sc = evaluateMove(bd, x, y, maximizing ? me : 3-me);
+      return {x,y,sc};
+    }).sort((a,b) => b.sc - a.sc).slice(0, 8);
+
+    if (maximizing) {
+      let val = -Infinity;
+      for (const {x,y} of scored) {
+        bd[y][x] = me;
+        if (checkWin(x,y,me)) { bd[y][x]=0; return 1000000; }
+        val = Math.max(val, minimax(bd, depth-1, alpha, beta, false, me));
+        bd[y][x] = 0;
+        alpha = Math.max(alpha, val);
+        if (beta <= alpha) break;
+      }
+      return val;
+    } else {
+      let val = Infinity;
+      for (const {x,y} of scored) {
+        bd[y][x] = 3-me;
+        if (checkWin(x,y,3-me)) { bd[y][x]=0; return -1000000; }
+        val = Math.min(val, minimax(bd, depth-1, alpha, beta, true, me));
+        bd[y][x] = 0;
+        beta = Math.min(beta, val);
+        if (beta <= alpha) break;
+      }
+      return val;
+    }
+  }
+
+  function aiMove() {
+    if (gameOver) return;
+    const me = current;
+    const op = 3 - me;
+    const cands = getCandidates(board);
+
+    // 즉승 / 즉방어 체크 (모든 난이도 공통, 단 초급은 일부 무시)
+    // 1. 내가 이길 수 있는 수
+    for (const [x,y] of cands) {
+      board[y][x] = me;
+      if (checkWin(x,y,me)) { board[y][x]=0; place(x,y,me); return; }
+      board[y][x] = 0;
+    }
+    // 2. 상대가 이기는 수 막기 (초급은 50% 확률로 놓침)
+    if (level > 1 || Math.random() > 0.5) {
+      for (const [x,y] of cands) {
+        board[y][x] = op;
+        if (checkWin(x,y,op)) { board[y][x]=0; place(x,y,me); return; }
+        board[y][x] = 0;
+      }
+    }
+
+    let best = null;
+    let bestScore = -Infinity;
+
+    if (level === 1) {
+      // 초급: 단순 평가 + 큰 노이즈, 후보도 일부만 고려
+      const sample = cands.sort(() => Math.random()-0.5).slice(0, Math.min(15, cands.length));
+      for (const [x,y] of sample) {
+        const sc = evaluateMove(board, x, y, me) + Math.random() * 2000;
+        if (sc > bestScore) { bestScore = sc; best = [x,y]; }
+      }
+    } else if (level === 2) {
+      // 중급: 전체 후보 1수 평가 + 작은 노이즈
+      for (const [x,y] of cands) {
+        const sc = evaluateMove(board, x, y, me) + Math.random() * 100;
+        if (sc > bestScore) { bestScore = sc; best = [x,y]; }
+      }
+    } else if (level === 3) {
+      // 고급: 미니맥스 깊이 2
+      const scored = cands.map(([x,y]) => ({x,y,sc:evaluateMove(board,x,y,me)}))
+        .sort((a,b)=>b.sc-a.sc).slice(0, 12);
+      for (const {x,y} of scored) {
+        board[y][x] = me;
+        const sc = minimax(board, 1, -Infinity, Infinity, false, me);
+        board[y][x] = 0;
+        if (sc > bestScore) { bestScore = sc; best = [x,y]; }
+      }
+    } else {
+      // 신급: 미니맥스 깊이 4 + 더 넓은 가지치기
+      const scored = cands.map(([x,y]) => ({x,y,sc:evaluateMove(board,x,y,me)}))
+        .sort((a,b)=>b.sc-a.sc).slice(0, 14);
+      for (const {x,y} of scored) {
+        board[y][x] = me;
+        const sc = minimax(board, 3, -Infinity, Infinity, false, me);
+        board[y][x] = 0;
+        if (sc > bestScore) { bestScore = sc; best = [x,y]; }
+      }
+    }
+
+    if (!best) best = cands[0];
+    place(best[0], best[1], me);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
